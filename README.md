@@ -4,6 +4,23 @@ Este projeto é uma aplicação de Machine Learning que classifica sentimentos (
 
 ---
 
+!## 📸 Demonstração
+
+## 📸 Demonstração
+
+<p align="center">
+  <img src="img/Captura de tela 2026-06-23 001245.png" 
+       alt="Interface do Classificador de Sentimentos"
+       width="900">
+</p>
+
+<p align="center">
+  <img src="img/Captura de tela 2026-06-23 001322.png" 
+       alt="Interface do Classificador de Sentimentos"
+       width="900">
+</p>
+
+
 ## 💡 Propósito e Evolução do Projeto
 
 Este é um **projeto de aprendizado** que representa uma evolução direta de um estudo anterior.
