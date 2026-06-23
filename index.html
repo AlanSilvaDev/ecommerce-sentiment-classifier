@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classificador de Sentimentos - E-Commerce</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #090d16;
+            --bg-card: rgba(17, 25, 40, 0.65);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --positive-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --negative-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Glowing background effects */
+        body::before, body::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.15;
+        }
+        body::before {
+            background: #6366f1;
+            top: 10%;
+            left: 15%;
+        }
+        body::after {
+            background: #a855f7;
+            bottom: 10%;
+            right: 15%;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 580px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #fff, #9ca3af);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 32px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #e5e7eb;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            outline: none;
+            transition: var(--transition-fast);
+        }
+
+        textarea:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .textarea-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .char-counter.error {
+            color: #ef4444;
+        }
+
+        button {
+            background: var(--accent-gradient);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 14px 24px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
+            opacity: 0.95;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading-spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Result Box Styles */
+        .result-box {
+            margin-top: 8px;
+            border-radius: 16px;
+            padding: 24px;
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            animation: slideDown var(--transition-fast) ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-box.positivo {
+            background: rgba(16, 185, 129, 0.08);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .result-box.negativo {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sentiment-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 1.15rem;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .positivo .sentiment-badge { color: #34d399; }
+        .negativo .sentiment-badge { color: #f87171; }
+
+        .sentiment-emoji {
+            font-size: 1.5rem;
+        }
+
+        .confidence-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .confidence-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .confidence-bar-bg {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .confidence-bar-fill {
+            height: 100%;
+            width: 0;
+            border-radius: 4px;
+            transition: width 0.8s cubic-bezier(0.1, 0.8, 0.25, 1);
+        }
+
+        .positivo .confidence-bar-fill { background: var(--positive-gradient); }
+        .negativo .confidence-bar-fill { background: var(--negative-gradient); }
+
+        /* Model Metadata */
+        .meta-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-top: 1px solid var(--border-color);
+            border-radius: 0 0 20px 20px;
+            margin-top: -12px;
+        }
+
+        .error-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 12px;
+            padding: 14px;
+            color: #f87171;
+            font-size: 0.875rem;
+            display: none;
+            animation: slideDown var(--transition-fast) ease-out;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .card { padding: 20px; }
+            .header h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Classificador de Sentimentos</h1>
+            <p>Insira uma avaliação de produto para classificar como positiva ou negativa.</p>
+        </div>
+
+        <div class="card">
+            <div class="input-group">
+                <label for="review-text">Avaliação do Cliente</label>
+                <textarea id="review-text" placeholder="Escreva a avaliação aqui... (mínimo de 3 caracteres)"></textarea>
+                <div class="textarea-footer">
+                    <span id="validation-msg">Mínimo de 3 caracteres</span>
+                    <span id="char-counter" class="char-counter">0/1000</span>
+                </div>
+            </div>
+
+            <button id="analyze-btn" disabled>
+                <span class="loading-spinner" id="spinner"></span>
+                <span id="btn-text">Analisar Sentimento</span>
+            </button>
+
+            <div class="error-box" id="error-container"></div>
+
+            <div class="result-box" id="result-container">
+                <div class="result-header">
+                    <div class="sentiment-badge">
+                        <span class="sentiment-emoji" id="result-emoji">😊</span>
+                        <span id="result-sentiment-text">Positivo</span>
+                    </div>
+                </div>
+                <div class="confidence-container">
+                    <div class="confidence-label">
+                        <span>Confiança da previsão</span>
+                        <span id="result-confidence-val">0%</span>
+                    </div>
+                    <div class="confidence-bar-bg">
+                        <div class="confidence-bar-fill" id="result-confidence-bar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="meta-info">
+            <span id="model-algo">Carregando informações do modelo...</span>
+            <span id="model-acc"></span>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000'; // URL absoluta para funcionar localmente (file://)
+
+        const textarea = document.getElementById('review-text');
+        const charCounter = document.getElementById('char-counter');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const btnText = document.getElementById('btn-text');
+        const spinner = document.getElementById('spinner');
+        const resultContainer = document.getElementById('result-container');
+        const resultEmoji = document.getElementById('result-emoji');
+        const resultSentimentText = document.getElementById('result-sentiment-text');
+        const resultConfidenceVal = document.getElementById('result-confidence-val');
+        const resultConfidenceBar = document.getElementById('result-confidence-bar');
+        const errorContainer = document.getElementById('error-container');
+        const modelAlgo = document.getElementById('model-algo');
+        const modelAcc = document.getElementById('model-acc');
+
+        // Fetch model info on load
+        async function loadModelInfo() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/model-info`);
+                if (response.ok) {
+                    const info = await response.json();
+                    modelAlgo.textContent = `${info.Nome} v${info.Versão}`;
+                    modelAcc.textContent = `Acurácia: ${(info.acuracia_treino * 100).toFixed(2)}%`;
+                }
+            } catch (e) {
+                console.error("Erro ao obter metadados do modelo:", e);
+                modelAlgo.textContent = "Classificador de Sentimentos de E-commerce";
+            }
+        }
+        loadModelInfo();
+
+        // Textarea events for live validation
+        textarea.addEventListener('input', () => {
+            const len = textarea.value.length;
+            charCounter.textContent = `${len}/1000`;
+            
+            if (len > 1000) {
+                charCounter.classList.add('error');
+                analyzeBtn.disabled = true;
+            } else {
+                charCounter.classList.remove('error');
+                analyzeBtn.disabled = len < 3;
+            }
+        });
+
+        // Analyze sentiment on click
+        analyzeBtn.addEventListener('click', async () => {
+            const text = textarea.value.trim();
+            if (text.length < 3) return;
+
+            // UI Loading state
+            analyzeBtn.disabled = true;
+            spinner.style.display = 'block';
+            btnText.textContent = 'Analisando...';
+            resultContainer.style.display = 'none';
+            errorContainer.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/predict`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ texto: text })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const sentimento = data.sentimento;
+                    const confianca = data.confianca;
+
+                    // Setup result view
+                    resultContainer.className = 'result-box ' + sentimento;
+                    resultSentimentText.textContent = sentimento === 'positivo' ? 'Positivo' : 'Negativo';
+                    resultEmoji.textContent = sentimento === 'positivo' ? '😊' : '😢';
+                    
+                    // Confidence percentage
+                    const pct = (confianca * 100).toFixed(1) + '%';
+                    resultConfidenceVal.textContent = pct;
+                    
+                    // Show result container
+                    resultContainer.style.display = 'flex';
+                    
+                    // Animate progress bar fill after display
+                    setTimeout(() => {
+                        resultConfidenceBar.style.width = pct;
+                    }, 50);
+                } else {
+                    // Error handling for 422
+                    let errMsg = "Erro ao processar a previsão.";
+                    if (data.detail && Array.isArray(data.detail)) {
+                        errMsg = data.detail.map(d => d.msg).join("<br>");
+                    }
+                    errorContainer.innerHTML = errMsg;
+                    errorContainer.style.display = 'block';
+                }
+            } catch (e) {
+                console.error(e);
+                errorContainer.textContent = "Erro de conexão com o servidor.";
+                errorContainer.style.display = 'block';
+            } finally {
+                // Reset button state
+                analyzeBtn.disabled = false;
+                spinner.style.display = 'none';
+                btnText.textContent = 'Analisar Sentimento';
+            }
+        });
+    </script>
+</body>
+</html>
